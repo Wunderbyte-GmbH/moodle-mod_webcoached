@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Seeding script for setting up mod_webcoached sandbox environment.
+ * CLI script to test Webcoached API response using config credentials.
  *
  * @package     mod_webcoached
  * @copyright   2026 Wunderbyte GmbH <info@wunderbyte.at>
@@ -26,102 +26,140 @@ define('CLI_SCRIPT', true);
 
 require(__DIR__ . '/../../../config.php');
 require_once($CFG->libdir . '/clilib.php');
-require_once($CFG->dirroot . '/course/lib.php');
-require_once($CFG->dirroot . '/user/lib.php');
+require_once($CFG->libdir . '/filelib.php');
 
 // Bootstrap Moodle CLI shell output.
 [$options, $unrecognized] = cli_get_params(
-    [],
-    []
+    [
+        'help' => false,
+        'secret' => null,
+        'clientid' => null,
+        'endpoint' => null,
+        'redirect' => 1,
+    ],
+    [
+        'h' => 'help',
+        's' => 'secret',
+        'c' => 'clientid',
+        'e' => 'endpoint',
+        'r' => 'redirect',
+    ]
 );
 
-cli_writeln('Initializing Webcoached Sandbox Setup...');
+if ($options['help']) {
+    $help = "Test script for mod_webcoached API.
 
-// 1. Create or fetch course.
-$course = $DB->get_record('course', ['shortname' => 'webcoached_sandbox']);
-if (!$course) {
-    cli_writeln('Creating course "Webcoached Sandbox Course"...');
-    $course = create_course((object)[
-        'shortname' => 'webcoached_sandbox',
-        'fullname' => 'Webcoached Sandbox Course',
-        'category' => 1,
-        'format' => 'topics',
-        'numsections' => 1,
-    ]);
-} else {
-    cli_writeln('Found existing course "Webcoached Sandbox Course".');
+Options:
+-h, --help      Print this help.
+-s, --secret    Override secret key.
+-c, --clientid  Override client ID.
+-e, --endpoint  Override endpoint URL.
+-r, --redirect  Set redirect parameter (0 or 1). Default 1.
+";
+    cli_writeln($help);
+    exit(0);
 }
 
-// 2. Create or fetch evaluator user.
-$user = $DB->get_record('user', ['username' => 'evaluator']);
+// Retrieve credentials.
+$clientid = $options['clientid'] ?? get_config('mod_webcoached', 'client_id');
+if (empty($clientid)) {
+    $clientid = 'moodle_test';
+}
+
+$secretkey = $options['secret'] ?? get_config('mod_webcoached', 'secret_key');
+$iskeywarning = false;
+if (empty($secretkey)) {
+    $iskeywarning = true;
+    $secretkey = '';
+}
+
+$endpointurl = $options['endpoint'] ?? get_config('mod_webcoached', 'endpoint_url');
+if (empty($endpointurl)) {
+    $endpointurl = 'https://www.webcoachedtraining.de/api/external/moodle.php';
+}
+
+$redirect = isset($options['redirect']) ? (int)$options['redirect'] : 1;
+
+// Fetch a test user (admin or any active user).
+$user = $DB->get_record('user', ['username' => 'admin']);
 if (!$user) {
-    cli_writeln('Creating user "evaluator" (password: Evaluator123!)...');
-    $userobj = new stdClass();
-    $userobj->username = 'evaluator';
-    $userobj->password = 'Evaluator123!';
-    $userobj->firstname = 'Webcoached';
-    $userobj->lastname = 'Evaluator';
-    $userobj->email = 'evaluator@webcoachedtraining.de';
-    $userobj->confirmed = 1;
-    $userobj->mnethostid = $CFG->mnet_localhost_id;
-    $userid = user_create_user($userobj, true, false);
-    $user = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
+    $user = $DB->get_record_select('user', 'username != :guest AND deleted = 0', ['guest' => 'guest'], '*', IGNORE_MULTIPLE);
+}
+if (!$user) {
+    $user = (object)[
+        'id' => 123,
+        'firstname' => 'Test',
+        'lastname' => 'User',
+        'email' => 'testuser@example.com',
+    ];
+}
+
+cli_writeln('========================================');
+cli_writeln('Webcoached API Response Testing Tool');
+cli_writeln('========================================');
+cli_writeln("Endpoint URL: {$endpointurl}");
+cli_writeln("Client ID:    {$clientid}");
+if ($iskeywarning) {
+    cli_writeln("Secret Key:   [NOT SET / EMPTY] (Warning: Calculations may fail validation)");
 } else {
-    cli_writeln('Found existing user "evaluator".');
+    cli_writeln("Secret Key:   " . str_repeat('*', 8) . substr($secretkey, -4));
 }
+cli_writeln("Test User:    {$user->firstname} {$user->lastname} (ID: {$user->id})");
+cli_writeln("Redirect:     {$redirect}");
 
-// 3. Enroll evaluator user as student.
-$studentrole = $DB->get_record('role', ['shortname' => 'student'], '*', MUST_EXIST);
-$instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'manual']);
-if ($instance) {
-    $enrol = enrol_get_plugin('manual');
-    if (!$DB->record_exists('user_enrolments', ['enrolid' => $instance->id, 'userid' => $user->id])) {
-        cli_writeln('Enrolling evaluator user in course...');
-        $enrol->enrol_user($instance, $user->id, $studentrole->id);
+$courses = ['COURSE01', 'COURSE02', 'COURSE03'];
+foreach ($courses as $courseid) {
+    cli_writeln("\n----------------------------------------");
+    cli_writeln("Testing Course ID: {$courseid}");
+    cli_writeln("----------------------------------------");
+
+    $nonce = bin2hex(random_bytes(16));
+    $timestamp = time();
+
+    // Prepare parameters.
+    $params = [
+        'client_id'      => $clientid,
+        'timestamp'      => $timestamp,
+        'nonce'          => $nonce,
+        'moodle_user_id' => (int)$user->id,
+        'course_id'      => $courseid,
+        'firstname'      => $user->firstname,
+        'lastname'       => $user->lastname,
+        'redirect'       => $redirect,
+    ];
+
+    // Sort parameters lexicographically by key.
+    ksort($params);
+
+    // Build the query string representation of the parameters.
+    $payload = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+
+    // Compute HMAC-SHA256 signature.
+    $signature = hash_hmac('sha256', $payload, $secretkey);
+
+    // Prepare HTTP POST fields.
+    $postparams = $params;
+    $postparams['signature'] = $signature;
+
+    cli_writeln("Parameters sent:");
+    foreach ($postparams as $key => $val) {
+        cli_writeln("  - {$key}: {$val}");
+    }
+    cli_writeln("Calculated signature: {$signature}");
+
+    cli_writeln("Sending request...");
+
+    $curl = new curl();
+    $response = $curl->post($endpointurl, $postparams);
+
+    if ($curl->get_errno()) {
+        cli_writeln("cURL Error ({$curl->get_errno()}): {$curl->error}");
     } else {
-        cli_writeln('Evaluator user is already enrolled.');
+        cli_writeln("Response from server:");
+        cli_writeln($response);
     }
 }
 
-// 4. Create Webcoached module activities.
-$targets = ['COURSE01', 'COURSE02', 'COURSE03'];
-$module = $DB->get_record('modules', ['name' => 'webcoached']);
-
-if (!$module) {
-    cli_err('Module "webcoached" is not installed in Moodle. Please run upgradedb or visit notifications page first.');
-    exit(1);
-}
-
-foreach ($targets as $target) {
-    if (!$DB->record_exists('webcoached', ['course' => $course->id, 'remotecourseid' => $target])) {
-        cli_writeln("Creating activity instance for remote course ID: {$target}...");
-
-        // Insert webcoached record.
-        $webcoached = new stdClass();
-        $webcoached->course = $course->id;
-        $webcoached->name = 'Webcoached Training ' . $target;
-        $webcoached->intro = '<p>Click below to redirect to the external Webcoached training module for ' . $target . '.</p>';
-        $webcoached->introformat = FORMAT_HTML;
-        $webcoached->remotecourseid = $target;
-        $webcoached->timecreated = time();
-        $webcoached->timemodified = time();
-        $instanceid = $DB->insert_record('webcoached', $webcoached);
-
-        // Insert course_modules record.
-        $cm = new stdClass();
-        $cm->course = $course->id;
-        $cm->module = $module->id;
-        $cm->instance = $instanceid;
-        $cm->section = 0;
-        $cm->added = time();
-        $cmid = add_course_module($cm);
-
-        // Add to section.
-        course_add_cm_to_section($course->id, $cmid, 0);
-    } else {
-        cli_writeln("Activity instance for remote course ID {$target} already exists.");
-    }
-}
-
-rebuild_course_cache($course->id, true);
-cli_writeln('Sandbox setup complete!');
+cli_writeln("\n========================================");
+cli_writeln('Testing complete.');
+cli_writeln('========================================');
