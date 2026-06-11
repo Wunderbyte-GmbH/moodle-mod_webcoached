@@ -42,7 +42,7 @@ class mod_webcoached_generator extends testing_module_generator {
     public function create_instance($record = null, ?array $options = null) {
         $record = (object) (array) $record;
         if (!isset($record->remotecourseid)) {
-            $record->remotecourseid = 'COURSE01';
+            $record->remotecourseid = '1111';
         }
         return parent::create_instance($record, (array) $options);
     }

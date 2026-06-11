@@ -1,0 +1,53 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template mod_webcoached/autopost
+
+    Auto-submitting form that posts the signed SSO login parameters from the
+    user's browser to the Webcoached endpoint, so the Webcoached session cookie
+    is established in the user's browser.
+
+    Classes required for JS:
+    * none
+
+    Data providers required for this template:
+    * none
+
+    Context variables required for this template:
+    * endpoint string The Webcoached directlogin endpoint URL.
+    * fields array List of hidden form fields, each with name and value.
+
+    Example context (json):
+    {
+        "endpoint": "https://www.webcoachedtraining.de/app/moodle/directlogin",
+        "fields": [
+            {"name": "client_id", "value": "moodle_test"},
+            {"name": "signature", "value": "abc123"}
+        ]
+    }
+}}
+<div class="mod_webcoached_autopost d-flex flex-column align-items-center justify-content-center p-5 text-center">
+    <form id="webcoached_sso_form" action="{{{endpoint}}}" method="post">
+        {{#fields}}
+        <input type="hidden" name="{{name}}" value="{{value}}">
+        {{/fields}}
+        <p class="text-muted mb-3">{{#str}}redirecting, mod_webcoached{{/str}}</p>
+        <button class="btn btn-primary btn-lg px-5 py-3 shadow-sm" type="submit">
+            <i class="fa fa-external-link mr-2"></i> {{#str}}continue_button, mod_webcoached{{/str}}
+        </button>
+    </form>
+</div>

@@ -47,16 +47,16 @@ final class webcoached_test extends advanced_testcase {
         set_config('client_id', 'moodle_test', 'mod_webcoached');
         set_config('secret_key', 'test_secret', 'mod_webcoached');
 
+        // Only the parameters documented by Webcoached are signed: client_id, timestamp,
+        // nonce, moodle_user_id, course_id, firstname and lastname (no email, no redirect).
         $params = [
             'client_id'      => 'moodle_test',
             'timestamp'      => 1600000000,
             'nonce'          => 'abcdef1234567890',
             'moodle_user_id' => 12,
-            'course_id'      => 'COURSE01',
-            'email'          => 'student@example.com',
+            'course_id'      => 1111,
             'firstname'      => 'John',
             'lastname'       => 'Doe',
-            'redirect'       => 1,
         ];
 
         ksort($params);
@@ -65,8 +65,12 @@ final class webcoached_test extends advanced_testcase {
 
         // Check format of payload query string.
         $this->assertStringContainsString('client_id=moodle_test', $payload);
-        $this->assertStringContainsString('course_id=COURSE01', $payload);
+        $this->assertStringContainsString('course_id=1111', $payload);
         $this->assertStringContainsString('nonce=abcdef1234567890', $payload);
+
+        // The signed payload must not contain the legacy email or redirect parameters.
+        $this->assertStringNotContainsString('email=', $payload);
+        $this->assertStringNotContainsString('redirect=', $payload);
 
         // Assert signature matches HMAC-SHA256 calculations.
         $expected = hash_hmac('sha256', $payload, 'test_secret');
@@ -97,11 +101,11 @@ final class webcoached_test extends advanced_testcase {
         $webcoached = $this->getDataGenerator()->create_module('webcoached', [
             'course'         => $course->id,
             'name'           => 'Test Webcoached Activity',
-            'remotecourseid' => 'TESTCOURSE',
+            'remotecourseid' => '1111',
         ]);
 
         $this->assertNotEmpty($webcoached->id);
         $this->assertEquals('Test Webcoached Activity', $webcoached->name);
-        $this->assertEquals('TESTCOURSE', $webcoached->remotecourseid);
+        $this->assertEquals('1111', $webcoached->remotecourseid);
     }
 }

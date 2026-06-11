@@ -24,7 +24,6 @@
 
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
-require_once($CFG->libdir . '/filelib.php');
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -59,53 +58,55 @@ if ($launch) {
     $secret = get_config('mod_webcoached', 'secret_key');
     $endpointurl = get_config('mod_webcoached', 'endpoint_url');
 
-    // Build payload.
+    if (empty($endpointurl)) {
+        $endpointurl = 'https://www.webcoachedtraining.de/app/moodle/directlogin';
+    }
+
+    // Build the login payload for the current user. Only the parameters documented by
+    // Webcoached are included and signed: client_id, timestamp, nonce, moodle_user_id,
+    // course_id, firstname and lastname.
     $params = [
         'client_id'      => $clientid ? $clientid : 'moodle_test',
         'timestamp'      => time(),
         'nonce'          => bin2hex(random_bytes(16)),
         'moodle_user_id' => (int)$USER->id,
         'course_id'      => $webcoached->remotecourseid,
-        'email'          => $USER->email,
         'firstname'      => $USER->firstname,
         'lastname'       => $USER->lastname,
-        'redirect'       => 1,
     ];
 
-    // Canonical payload sorting.
+    // Canonical payload: parameters alphabetically sorted and RFC3986 encoded.
     ksort($params);
+    $canonical = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
 
-    // Build query.
-    $payload = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    // Sign the canonical payload server-side with HMAC-SHA256. The secret key is only
+    // ever used here on the server and is never exposed to the browser or JavaScript.
+    $params['signature'] = hash_hmac('sha256', $canonical, $secret);
 
-    // Hash payload using HMAC-SHA256.
-    $signature = hash_hmac('sha256', $payload, $secret);
-
-    // Prepare HTTP request.
-    $curl = new curl();
-    $postparams = $params;
-    $postparams['signature'] = $signature;
-
-    $response = $curl->post($endpointurl, $postparams);
-
-    if ($curl->get_errno()) {
-        throw new moodle_exception('error_curl', 'mod_webcoached');
+    // This is a browser-based SSO login flow, not a JSON API call: the Webcoached session
+    // cookie must be created in the user's own browser. The signed parameters are therefore
+    // submitted via an auto-posting form from the browser rather than a server-side request.
+    $fields = [];
+    foreach ($params as $name => $value) {
+        $fields[] = ['name' => $name, 'value' => $value];
     }
 
-    $redirecturl = null;
-    $decoded = json_decode($response, true);
-    if (is_array($decoded) && isset($decoded['url'])) {
-        $redirecturl = $decoded['url'];
-    } else if (preg_match('/^https?:\/\//i', trim($response))) {
-        $redirecturl = trim($response);
-    }
-
-    if (empty($redirecturl)) {
-        throw new moodle_exception('error_request', 'mod_webcoached', '', s($response));
-    }
-
-    // Redirect user to the external course.
-    redirect($redirecturl);
+    $PAGE->set_pagelayout('embedded');
+    echo $OUTPUT->header();
+    echo $OUTPUT->render_from_template('mod_webcoached/autopost', [
+        'endpoint' => $endpointurl,
+        'fields'   => $fields,
+    ]);
+    $PAGE->requires->js_amd_inline("
+        require([], function() {
+            var form = document.getElementById('webcoached_sso_form');
+            if (form) {
+                form.submit();
+            }
+        });
+    ");
+    echo $OUTPUT->footer();
+    exit;
 }
 
 // Render normal launch page.

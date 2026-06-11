@@ -44,7 +44,7 @@ if ($ADMIN->fulltree) {
         'mod_webcoached/endpoint_url',
         get_string('endpoint_url', 'mod_webcoached'),
         get_string('endpoint_url_desc', 'mod_webcoached'),
-        'https://www.webcoachedtraining.de/api/external/moodle.php',
+        'https://www.webcoachedtraining.de/app/moodle/directlogin',
         PARAM_URL
     ));
 }

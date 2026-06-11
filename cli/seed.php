@@ -35,26 +35,27 @@ require_once($CFG->libdir . '/filelib.php');
         'secret' => null,
         'clientid' => null,
         'endpoint' => null,
-        'redirect' => 1,
     ],
     [
         'h' => 'help',
         's' => 'secret',
         'c' => 'clientid',
         'e' => 'endpoint',
-        'r' => 'redirect',
     ]
 );
 
 if ($options['help']) {
-    $help = "Test script for mod_webcoached API.
+    $help = "Diagnostic script for the mod_webcoached SSO signature and endpoint.
+
+Note: production uses a browser-based POST so the Webcoached session is created in
+the user's browser. This CLI performs a server-side POST only to inspect signature
+validation and the endpoint response; it cannot establish a real browser session.
 
 Options:
 -h, --help      Print this help.
 -s, --secret    Override secret key.
 -c, --clientid  Override client ID.
 -e, --endpoint  Override endpoint URL.
--r, --redirect  Set redirect parameter (0 or 1). Default 1.
 ";
     cli_writeln($help);
     exit(0);
@@ -75,10 +76,8 @@ if (empty($secretkey)) {
 
 $endpointurl = $options['endpoint'] ?? get_config('mod_webcoached', 'endpoint_url');
 if (empty($endpointurl)) {
-    $endpointurl = 'https://www.webcoachedtraining.de/api/external/moodle.php';
+    $endpointurl = 'https://www.webcoachedtraining.de/app/moodle/directlogin';
 }
-
-$redirect = isset($options['redirect']) ? (int)$options['redirect'] : 1;
 
 // Fetch a test user (admin or any active user).
 $user = $DB->get_record('user', ['username' => 'admin']);
@@ -105,9 +104,8 @@ if ($iskeywarning) {
     cli_writeln("Secret Key:   " . str_repeat('*', 8) . substr($secretkey, -4));
 }
 cli_writeln("Test User:    {$user->firstname} {$user->lastname} (ID: {$user->id})");
-cli_writeln("Redirect:     {$redirect}");
 
-$courses = ['COURSE01', 'COURSE02', 'COURSE03'];
+$courses = [1111, 1112, 1113];
 foreach ($courses as $courseid) {
     cli_writeln("\n----------------------------------------");
     cli_writeln("Testing Course ID: {$courseid}");
@@ -116,7 +114,7 @@ foreach ($courses as $courseid) {
     $nonce = bin2hex(random_bytes(16));
     $timestamp = time();
 
-    // Prepare parameters.
+    // Prepare parameters (only the parameters documented by Webcoached are signed).
     $params = [
         'client_id'      => $clientid,
         'timestamp'      => $timestamp,
@@ -125,7 +123,6 @@ foreach ($courses as $courseid) {
         'course_id'      => $courseid,
         'firstname'      => $user->firstname,
         'lastname'       => $user->lastname,
-        'redirect'       => $redirect,
     ];
 
     // Sort parameters lexicographically by key.
