@@ -325,8 +325,14 @@ wstoken=<TOKEN>
 | `send_message` | bool | no (default `true`) | When `1`/`true`, the notification is sent. When `0`/`false`, nothing is sent and `status` is `false`. |
 
 **Returns:** `{ "status": true|false, "warnings": [...] }`. `status` is `true` when
-a notification was sent. A `warnings` entry with code `notsent` (flag was false) or
-`invaliduser` (recipient missing/inactive) explains a `false` result.
+a notification was sent. A `warnings` entry explains a `false` result:
+
+| `warningcode` | Meaning |
+|---------------|---------|
+| `notsent` | `send_message` was not `true`. |
+| `invaliduser` | Recipient not found or inactive (deleted/suspended/guest). |
+| `providernotregistered` | The notification provider `mod_webcoached/webcoachedmessage` is not registered/available on the site. Run the plugin upgrade (`php admin/cli/upgrade.php`) and purge caches (`php admin/cli/purge_caches.php`), then retry. |
+| `messagenotsent` | `message_send()` did not deliver — e.g. buffered inside an open DB transaction, or blocked by the recipient's messaging preferences. |
 
 ### Example
 

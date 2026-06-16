@@ -1,0 +1,69 @@
+{
+  "exportedFrom": "Restfox-1.0.0",
+  "collection": [
+    {
+      "_id": "folder-webcoached",
+      "_type": "request_group",
+      "name": "Webcoached (demo)",
+      "parentId": null,
+      "workspaceId": "__WORKSPACE_ID__",
+      "sortOrder": 0
+    },
+    {
+      "_id": "request-webcoached-completion",
+      "_type": "request",
+      "name": "Webcoached – Aktivitätsabschluss (core_grades_update_grades)",
+      "method": "POST",
+      "url": "https://demo.wunderbyte.at/webservice/rest/server.php",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          { "name": "wstoken", "value": "12345jjj", "type": "text", "disabled": false },
+          { "name": "wsfunction", "value": "core_grades_update_grades", "type": "text", "disabled": false },
+          { "name": "moodlewsrestformat", "value": "json", "type": "text", "disabled": false },
+          { "name": "source", "value": "mod_webcoached", "type": "text", "disabled": false },
+          { "name": "courseid", "value": "176", "type": "text", "disabled": false },
+          { "name": "component", "value": "mod_webcoached", "type": "text", "disabled": false },
+          { "name": "activityid", "value": "3516", "type": "text", "disabled": false },
+          { "name": "itemnumber", "value": "0", "type": "text", "disabled": false },
+          { "name": "grades[0][studentid]", "value": "2031", "type": "text", "disabled": false },
+          { "name": "grades[0][grade]", "value": "100", "type": "text", "disabled": false }
+        ]
+      },
+      "headers": [],
+      "parameters": [],
+      "pathParameters": [],
+      "authentication": { "type": "No Auth" },
+      "description": "Schreibt die Note 100 für User 2031 in die Webcoached-Aktivität (cmid 3516, Kurs 176). Bei aktivierter Abschlussbedingung 'Bewertung erforderlich' wird die Aktivität dadurch automatisch abgeschlossen. Body als multipart/form-data (funktioniert in Restfox). wstoken durch ein echtes Token ersetzen.",
+      "parentId": "folder-webcoached",
+      "workspaceId": "__WORKSPACE_ID__",
+      "sortOrder": 0
+    },
+    {
+      "_id": "request-webcoached-send-message",
+      "_type": "request",
+      "name": "Webcoached – Nachricht senden (mod_webcoached_send_message)",
+      "method": "POST",
+      "url": "https://demo.wunderbyte.at/webservice/rest/server.php",
+      "body": {
+        "mimeType": "multipart/form-data",
+        "params": [
+          { "name": "wstoken", "value": "12345jjj", "type": "text", "disabled": false },
+          { "name": "wsfunction", "value": "mod_webcoached_send_message", "type": "text", "disabled": false },
+          { "name": "moodlewsrestformat", "value": "json", "type": "text", "disabled": false },
+          { "name": "cmid", "value": "3516", "type": "text", "disabled": false },
+          { "name": "userid", "value": "2031", "type": "text", "disabled": false },
+          { "name": "send_message", "value": "1", "type": "text", "disabled": false }
+        ]
+      },
+      "headers": [],
+      "parameters": [],
+      "pathParameters": [],
+      "authentication": { "type": "No Auth" },
+      "description": "Sendet User 2031 eine Benachrichtigung für die Webcoached-Aktivität (cmid 3516). Der Nachrichtentext stammt aus den Aktivitätseinstellungen ({name}/{link} werden ersetzt). Antwort: {\"status\":true,\"warnings\":[]}. Body als multipart/form-data. wstoken durch ein echtes Token ersetzen.",
+      "parentId": "folder-webcoached",
+      "workspaceId": "__WORKSPACE_ID__",
+      "sortOrder": 1
+    }
+  ]
+}

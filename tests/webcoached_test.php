@@ -353,6 +353,30 @@ final class webcoached_test extends advanced_testcase {
 
         $this->assertFalse($result['status']);
         $this->assertCount(0, $messages);
+        $this->assertCount(1, $result['warnings']);
+        $this->assertEquals('notsent', $result['warnings'][0]['warningcode']);
+    }
+
+    /**
+     * An invalid recipient yields status false with an explanatory warning.
+     *
+     * @covers \mod_webcoached\external\send_message::execute
+     */
+    public function test_send_message_invalid_user(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        [$course, $cm] = $this->setup_activity_with_student();
+
+        $sink = $this->redirectMessages();
+        $result = \mod_webcoached\external\send_message::execute($cm->id, -1, true);
+        $messages = $sink->get_messages();
+        $sink->close();
+
+        $this->assertFalse($result['status']);
+        $this->assertCount(0, $messages);
+        $this->assertCount(1, $result['warnings']);
+        $this->assertEquals('invaliduser', $result['warnings'][0]['warningcode']);
     }
 
     /**

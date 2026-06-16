@@ -105,9 +105,60 @@ class send_message extends external_api {
 
         $messageid = self::send($course, $cm, $context, $webcoached, $recipient);
 
+        if (empty($messageid)) {
+            // The message_send() call failed silently (it only emits a debugging notice). Work out why
+            // so the caller gets an actionable reason instead of a bare status:false.
+            return [
+                'status' => false,
+                'warnings' => [self::failure_warning($cm, $recipient)],
+            ];
+        }
+
         return [
-            'status' => !empty($messageid),
+            'status' => true,
             'warnings' => [],
+        ];
+    }
+
+    /**
+     * Determines the most likely reason message_send() did not deliver the notification.
+     *
+     * @param \cm_info $cm Course module.
+     * @param \stdClass $recipient Intended recipient.
+     * @return array A single external_warnings-shaped entry.
+     */
+    protected static function failure_warning($cm, $recipient): array {
+        global $CFG;
+        require_once($CFG->libdir . '/messagelib.php');
+
+        // The notification provider must be registered in the DB and available to the recipient;
+        // otherwise message_send() returns false (lib/messagelib.php). This is the common cause
+        // after a deploy where the plugin upgrade / cache purge has not been run on the site.
+        $provideravailable = false;
+        foreach (message_get_providers_for_user($recipient->id) as $provider) {
+            if ($provider->component === 'mod_webcoached' && $provider->name === 'webcoachedmessage') {
+                $provideravailable = true;
+                break;
+            }
+        }
+
+        if (!$provideravailable) {
+            return [
+                'item' => 'messageprovider',
+                'itemid' => $cm->id,
+                'warningcode' => 'providernotregistered',
+                'message' => 'The notification provider mod_webcoached/webcoachedmessage is not registered or not '
+                    . 'available for the recipient. On the target site run the plugin upgrade '
+                    . '(php admin/cli/upgrade.php) and purge caches (php admin/cli/purge_caches.php), then retry.',
+            ];
+        }
+
+        return [
+            'item' => 'message',
+            'itemid' => $recipient->id,
+            'warningcode' => 'messagenotsent',
+            'message' => 'message_send() did not deliver the notification. It may be buffered inside an open '
+                . 'database transaction, or blocked by the recipient\'s messaging preferences.',
         ];
     }
 
