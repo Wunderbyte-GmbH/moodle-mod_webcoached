@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/webcoached/db" VERSION="20260605" COMMENT="XMLDB file for Moodle mod_webcoached"
+<XMLDB PATH="mod/webcoached/db" VERSION="20260617" COMMENT="XMLDB file for Moodle mod_webcoached"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
@@ -12,6 +12,9 @@
         <FIELD NAME="intro" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Activity description."/>
         <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="The format of the intro field."/>
         <FIELD NAME="remotecourseid" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Numeric internal Webcoached course ID sent as course_id during SSO login (e.g. 1111, 1112, 1113)."/>
+        <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="100" SEQUENCE="false" COMMENT="Grade aggregate: positive value = max points, negative value = scale id, 0 = no grade."/>
+        <FIELD NAME="messagebody" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Body of the notification sent to the learner when the send_message REST call is triggered. Supports {name} and {link} placeholders. Empty falls back to the language default."/>
+        <FIELD NAME="messagebodyformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="The text format of the messagebody field."/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Timestamp of when the instance was added to the course."/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Timestamp of when the instance was last modified."/>
       </FIELDS>

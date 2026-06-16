@@ -43,6 +43,9 @@ class backup_webcoached_activity_structure_step extends backup_activity_structur
             'intro',
             'introformat',
             'remotecourseid',
+            'grade',
+            'messagebody',
+            'messagebodyformat',
             'timecreated',
             'timemodified',
         ]);

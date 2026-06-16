@@ -108,4 +108,307 @@ final class webcoached_test extends advanced_testcase {
         $this->assertEquals('Test Webcoached Activity', $webcoached->name);
         $this->assertEquals('1111', $webcoached->remotecourseid);
     }
+
+    /**
+     * A grade item is created in the gradebook when the activity is added.
+     *
+     * @covers ::webcoached_grade_item_update
+     */
+    public function test_grade_item_created_on_add_instance(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $webcoached = $this->getDataGenerator()->create_module('webcoached', [
+            'course' => $course->id,
+            'grade'  => 100,
+        ]);
+
+        $gradeitem = \grade_item::fetch([
+            'itemtype'     => 'mod',
+            'itemmodule'   => 'webcoached',
+            'iteminstance' => $webcoached->id,
+            'itemnumber'   => 0,
+        ]);
+
+        $this->assertNotFalse($gradeitem);
+        $this->assertEquals(GRADE_TYPE_VALUE, $gradeitem->gradetype);
+        $this->assertEquals(100, $gradeitem->grademax);
+    }
+
+    /**
+     * A negative grade value creates a scale-based grade item ("simple Completed").
+     *
+     * @covers ::webcoached_grade_item_update
+     */
+    public function test_grade_item_created_with_scale(): void {
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $scale = $this->getDataGenerator()->create_scale(['scale' => 'No,Yes']);
+        $webcoached = $this->getDataGenerator()->create_module('webcoached', [
+            'course' => $course->id,
+            'grade'  => -$scale->id,
+        ]);
+
+        $gradeitem = \grade_item::fetch([
+            'itemtype'     => 'mod',
+            'itemmodule'   => 'webcoached',
+            'iteminstance' => $webcoached->id,
+            'itemnumber'   => 0,
+        ]);
+
+        $this->assertNotFalse($gradeitem);
+        $this->assertEquals(GRADE_TYPE_SCALE, $gradeitem->gradetype);
+        $this->assertEquals($scale->id, $gradeitem->scaleid);
+    }
+
+    /**
+     * Writing a grade through the core REST web service completes the activity.
+     *
+     * This is the REST trigger path: the external Webcoached system calls
+     * core_grades_update_grades, which cascades to the core "completionusegrade"
+     * condition and marks the activity complete.
+     *
+     * @covers ::webcoached_grade_item_update
+     */
+    public function test_rest_grade_triggers_completion(): void {
+        global $CFG;
+        require_once($CFG->libdir . '/gradelib.php');
+
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        [$course, $cm, $student, $webcoached] = $this->setup_graded_activity_with_completion();
+
+        $result = \core_grades_external::update_grades(
+            'mod_webcoached',
+            $course->id,
+            'mod_webcoached',
+            $cm->id,
+            0,
+            [['studentid' => $student->id, 'grade' => 80]]
+        );
+        $this->assertEquals(GRADE_UPDATE_OK, $result);
+
+        // The grade landed in the gradebook.
+        $grades = grade_get_grades($course->id, 'mod', 'webcoached', $webcoached->id, $student->id);
+        $this->assertEquals(80, (int) $grades->items[0]->grades[$student->id]->grade);
+
+        // The activity is now complete for the student.
+        $completion = new \completion_info($course);
+        $data = $completion->get_data($cm, false, $student->id);
+        $this->assertEquals(COMPLETION_COMPLETE, $data->completionstate);
+    }
+
+    /**
+     * The REST grade write is idempotent: calling twice keeps a single grade and completion.
+     *
+     * @covers ::webcoached_grade_item_update
+     */
+    public function test_rest_grade_idempotent(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/gradelib.php');
+
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        [$course, $cm, $student, $webcoached] = $this->setup_graded_activity_with_completion();
+
+        $args = ['mod_webcoached', $course->id, 'mod_webcoached', $cm->id, 0,
+            [['studentid' => $student->id, 'grade' => 55]]];
+        \core_grades_external::update_grades(...$args);
+        \core_grades_external::update_grades(...$args);
+
+        $gradeitem = \grade_item::fetch([
+            'itemtype'     => 'mod',
+            'itemmodule'   => 'webcoached',
+            'iteminstance' => $webcoached->id,
+            'itemnumber'   => 0,
+        ]);
+        $count = $DB->count_records('grade_grades', ['itemid' => $gradeitem->id, 'userid' => $student->id]);
+        $this->assertEquals(1, $count);
+
+        $completion = new \completion_info($course);
+        $data = $completion->get_data($cm, false, $student->id);
+        $this->assertEquals(COMPLETION_COMPLETE, $data->completionstate);
+    }
+
+    /**
+     * The core grades web service refuses to write grades without moodle/grade:edit.
+     *
+     * @covers ::webcoached_grade_item_update
+     */
+    public function test_rest_grade_requires_capability(): void {
+        $this->resetAfterTest(true);
+
+        [$course, $cm, $student, $webcoached] = $this->setup_graded_activity_with_completion();
+
+        // Act as the student, who lacks moodle/grade:edit.
+        $this->setUser($student);
+
+        $this->expectException(\moodle_exception::class);
+        \core_grades_external::update_grades(
+            'mod_webcoached',
+            $course->id,
+            'mod_webcoached',
+            $cm->id,
+            0,
+            [['studentid' => $student->id, 'grade' => 80]]
+        );
+    }
+
+    /**
+     * Deleting the activity removes its grade item from the gradebook.
+     *
+     * @covers ::webcoached_delete_instance
+     */
+    public function test_delete_instance_removes_grade_item(): void {
+        global $CFG;
+        require_once($CFG->dirroot . '/mod/webcoached/lib.php');
+
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $webcoached = $this->getDataGenerator()->create_module('webcoached', [
+            'course' => $course->id,
+            'grade'  => 100,
+        ]);
+
+        $criteria = [
+            'itemtype'     => 'mod',
+            'itemmodule'   => 'webcoached',
+            'iteminstance' => $webcoached->id,
+            'itemnumber'   => 0,
+        ];
+        $this->assertNotFalse(\grade_item::fetch($criteria));
+
+        webcoached_delete_instance($webcoached->id);
+
+        $this->assertFalse(\grade_item::fetch($criteria));
+    }
+
+    /**
+     * Helper: create a graded webcoached activity with grade-based completion and an enrolled student.
+     *
+     * @return array [course, cm, student, webcoached]
+     */
+    private function setup_graded_activity_with_completion(): array {
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $webcoached = $this->getDataGenerator()->create_module('webcoached', [
+            'course'             => $course->id,
+            'grade'              => 100,
+            'completion'         => COMPLETION_TRACKING_AUTOMATIC,
+            'completionusegrade' => 1,
+        ]);
+        $cm = get_coursemodule_from_instance('webcoached', $webcoached->id, $course->id, false, MUST_EXIST);
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+
+        return [$course, $cm, $student, $webcoached];
+    }
+
+    /**
+     * The send_message REST callback sends a notification to the learner.
+     *
+     * @covers \mod_webcoached\external\send_message::execute
+     */
+    public function test_send_message_sends_notification(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        [$course, $cm, $student] = $this->setup_activity_with_student();
+
+        $sink = $this->redirectMessages();
+        $result = \mod_webcoached\external\send_message::execute($cm->id, $student->id, true);
+        $messages = $sink->get_messages();
+        $sink->close();
+
+        $this->assertTrue($result['status']);
+        $this->assertCount(1, $messages);
+        $this->assertEquals($student->id, $messages[0]->useridto);
+        $this->assertEquals(1, $messages[0]->notification);
+
+        // Placeholders are resolved: the activity name and a link are present, no raw tokens remain.
+        $this->assertStringContainsString('Reading Training', $messages[0]->subject);
+        $this->assertStringContainsString('Reading Training', $messages[0]->fullmessagehtml);
+        $this->assertStringContainsString('/mod/webcoached/view.php', $messages[0]->fullmessagehtml);
+        $this->assertStringNotContainsString('{name}', $messages[0]->fullmessagehtml);
+        $this->assertStringNotContainsString('{link}', $messages[0]->fullmessagehtml);
+    }
+
+    /**
+     * The callback sends nothing when send_message is not true.
+     *
+     * @covers \mod_webcoached\external\send_message::execute
+     */
+    public function test_send_message_flag_false_sends_nothing(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        [$course, $cm, $student] = $this->setup_activity_with_student();
+
+        $sink = $this->redirectMessages();
+        $result = \mod_webcoached\external\send_message::execute($cm->id, $student->id, false);
+        $messages = $sink->get_messages();
+        $sink->close();
+
+        $this->assertFalse($result['status']);
+        $this->assertCount(0, $messages);
+    }
+
+    /**
+     * A per-activity custom message body overrides the default.
+     *
+     * @covers \mod_webcoached\external\send_message::execute
+     */
+    public function test_send_message_uses_custom_body(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        [$course, $cm, $student] = $this->setup_activity_with_student('Custom note for {name}: {link}');
+
+        $sink = $this->redirectMessages();
+        \mod_webcoached\external\send_message::execute($cm->id, $student->id, true);
+        $messages = $sink->get_messages();
+        $sink->close();
+
+        $this->assertCount(1, $messages);
+        $this->assertStringContainsString('Custom note for Reading Training:', $messages[0]->fullmessagehtml);
+        $this->assertStringContainsString('/mod/webcoached/view.php', $messages[0]->fullmessagehtml);
+    }
+
+    /**
+     * The callback requires the mod/webcoached:sendmessage capability.
+     *
+     * @covers \mod_webcoached\external\send_message::execute
+     */
+    public function test_send_message_requires_capability(): void {
+        $this->resetAfterTest(true);
+
+        [$course, $cm, $student] = $this->setup_activity_with_student();
+
+        // Act as the student, who lacks mod/webcoached:sendmessage.
+        $this->setUser($student);
+
+        $this->expectException(\required_capability_exception::class);
+        \mod_webcoached\external\send_message::execute($cm->id, $student->id, true);
+    }
+
+    /**
+     * Helper: create a webcoached activity with an enrolled student.
+     *
+     * @param string|null $messagebody Optional custom notification body.
+     * @return array [course, cm, student, webcoached]
+     */
+    private function setup_activity_with_student(?string $messagebody = null): array {
+        $course = $this->getDataGenerator()->create_course();
+        $record = ['course' => $course->id, 'name' => 'Reading Training'];
+        if ($messagebody !== null) {
+            $record['messagebody'] = $messagebody;
+        }
+        $webcoached = $this->getDataGenerator()->create_module('webcoached', $record);
+        $cm = get_coursemodule_from_instance('webcoached', $webcoached->id, $course->id, false, MUST_EXIST);
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+
+        return [$course, $cm, $student, $webcoached];
+    }
 }

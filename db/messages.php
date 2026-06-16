@@ -15,18 +15,22 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Message provider definitions for mod_webcoached.
  *
  * @package     mod_webcoached
+ * @category    message
  * @copyright   2026 Wunderbyte GmbH <info@wunderbyte.at>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'mod_webcoached';
-$plugin->version   = 2026061701;
-$plugin->requires  = 2024100400; // Requires Moodle 4.5.
-$plugin->supported = [405, 502];
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'v1.1.0';
+$messageproviders = [
+    // Notification sent to a learner when the external Webcoached system triggers the send_message REST call.
+    'webcoachedmessage' => [
+        'defaults' => [
+            'popup'  => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
+            'email'  => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
+        ],
+    ],
+];

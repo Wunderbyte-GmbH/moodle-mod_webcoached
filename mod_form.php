@@ -62,10 +62,41 @@ class mod_webcoached_mod_form extends moodleform_mod {
         $mform->addRule('remotecourseid', null, 'required', null, 'client');
         $mform->addHelpButton('remotecourseid', 'remotecourseid', 'mod_webcoached');
 
-        // Add standard elements.
+        // Notification body sent to the learner when the send_message REST call is triggered.
+        // Supports the placeholders {name} (activity name) and {link} (link to the activity).
+        $mform->addElement('editor', 'messagebody', get_string('messagebody', 'mod_webcoached'), ['rows' => 8]);
+        $mform->addHelpButton('messagebody', 'messagebody', 'mod_webcoached');
+
+        // Add the grade type selector (None / Point / Scale). Choosing a Yes/No scale
+        // gives a simple "Completed" mark; a point value gives a real score. Either way,
+        // core's "completionusegrade" condition completes the activity once a grade exists.
+        $this->standard_grading_coursemodule_elements();
+
+        // Add standard elements (this also renders the activity completion section,
+        // including the core "Student must receive a grade" completion condition).
         $this->standard_coursemodule_elements();
 
         // Add standard buttons.
         $this->add_action_buttons();
+    }
+
+    /**
+     * Prepares the form data for display.
+     *
+     * Converts the stored message body into the array shape the editor element
+     * expects and pre-fills the language default for new instances or empty bodies.
+     *
+     * @param array $defaultvalues Reference to the default form values.
+     */
+    public function data_preprocessing(&$defaultvalues) {
+        $text = $defaultvalues['messagebody'] ?? '';
+        $format = $defaultvalues['messagebodyformat'] ?? FORMAT_HTML;
+
+        if (trim((string) $text) === '') {
+            $text = get_string('messagebodydefault', 'mod_webcoached');
+            $format = FORMAT_HTML;
+        }
+
+        $defaultvalues['messagebody'] = ['text' => $text, 'format' => $format];
     }
 }

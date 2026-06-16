@@ -36,6 +36,12 @@ function webcoached_supports($feature) {
             return true;
         case FEATURE_BACKUP_MOODLE2:
             return true;
+        case FEATURE_GRADE_HAS_GRADE:
+            return true;
+        case FEATURE_GRADE_OUTCOMES:
+            return true;
+        case FEATURE_COMPLETION_TRACKS_VIEWS:
+            return true;
         default:
             return null;
     }
@@ -57,10 +63,20 @@ function webcoached_add_instance(stdClass $formdata, ?mod_webcoached_mod_form $m
     $data->intro = $formdata->intro;
     $data->introformat = $formdata->introformat;
     $data->remotecourseid = isset($formdata->remotecourseid) ? trim($formdata->remotecourseid) : '';
+    $data->grade = isset($formdata->grade) ? (int) $formdata->grade : 0;
+    webcoached_set_messagebody($data, $formdata);
     $data->timecreated = time();
     $data->timemodified = time();
 
-    return $DB->insert_record('webcoached', $data);
+    $data->id = $DB->insert_record('webcoached', $data);
+
+    // Carry the course-module idnumber over so the grade item is linked correctly.
+    $data->cmidnumber = $formdata->cmidnumber ?? null;
+
+    // Create the grade item in the gradebook so REST and manual grades have a target.
+    webcoached_grade_item_update($data);
+
+    return $data->id;
 }
 
 /**
@@ -79,9 +95,20 @@ function webcoached_update_instance(stdClass $formdata, ?mod_webcoached_mod_form
     $data->intro = $formdata->intro;
     $data->introformat = $formdata->introformat;
     $data->remotecourseid = isset($formdata->remotecourseid) ? trim($formdata->remotecourseid) : '';
+    $data->course = $formdata->course;
+    $data->grade = isset($formdata->grade) ? (int) $formdata->grade : 0;
+    webcoached_set_messagebody($data, $formdata);
     $data->timemodified = time();
 
-    return $DB->update_record('webcoached', $data);
+    $result = $DB->update_record('webcoached', $data);
+
+    // Carry the course-module idnumber over so the grade item is linked correctly.
+    $data->cmidnumber = $formdata->cmidnumber ?? null;
+
+    // Keep the grade item in sync (e.g. grade type / scale changes).
+    webcoached_grade_item_update($data);
+
+    return $result;
 }
 
 /**
@@ -93,9 +120,130 @@ function webcoached_update_instance(stdClass $formdata, ?mod_webcoached_mod_form
 function webcoached_delete_instance($id) {
     global $DB;
 
-    if (!$DB->record_exists('webcoached', ['id' => $id])) {
+    if (!$webcoached = $DB->get_record('webcoached', ['id' => $id])) {
         return false;
     }
 
+    // Remove the grade item (and any grades) from the gradebook.
+    webcoached_grade_item_delete($webcoached);
+
     return $DB->delete_records('webcoached', ['id' => $id]);
+}
+
+/**
+ * Copies the notification message body from the form data onto the instance record.
+ *
+ * Handles both the editor element shape (an array with 'text'/'format', from the
+ * activity settings form) and a plain string (e.g. from the test data generator).
+ *
+ * @param stdClass $data Target instance record being built.
+ * @param stdClass $formdata Submitted form data.
+ */
+function webcoached_set_messagebody(stdClass $data, stdClass $formdata) {
+    $data->messagebody = '';
+    $data->messagebodyformat = FORMAT_HTML;
+
+    if (!isset($formdata->messagebody)) {
+        return;
+    }
+
+    if (is_array($formdata->messagebody)) {
+        $data->messagebody = $formdata->messagebody['text'] ?? '';
+        $data->messagebodyformat = $formdata->messagebody['format'] ?? FORMAT_HTML;
+    } else {
+        $data->messagebody = (string) $formdata->messagebody;
+        if (isset($formdata->messagebodyformat)) {
+            $data->messagebodyformat = (int) $formdata->messagebodyformat;
+        }
+    }
+}
+
+/**
+ * Creates or updates the grade item for the given webcoached instance.
+ *
+ * Needed for the gradebook and so that the core `completionusegrade` condition
+ * can complete the activity automatically once a grade is written (whether via
+ * the gradebook UI or the core `core_grades_update_grades` web service).
+ *
+ * @param stdClass $webcoached Instance object with extra cmidnumber property.
+ * @param mixed $grades Optional array/object of grade(s); 'reset' resets grades in the gradebook.
+ * @return int GRADE_UPDATE_OK, GRADE_UPDATE_FAILED, etc.
+ */
+function webcoached_grade_item_update($webcoached, $grades = null) {
+    global $CFG;
+    require_once($CFG->libdir . '/gradelib.php');
+
+    $item = [
+        'itemname' => $webcoached->name,
+    ];
+    if (isset($webcoached->cmidnumber)) {
+        $item['idnumber'] = $webcoached->cmidnumber;
+    }
+
+    if (!isset($webcoached->grade) || $webcoached->grade == 0) {
+        $item['gradetype'] = GRADE_TYPE_NONE;
+    } else if ($webcoached->grade > 0) {
+        $item['gradetype'] = GRADE_TYPE_VALUE;
+        $item['grademax']  = $webcoached->grade;
+        $item['grademin']  = 0;
+    } else {
+        // Negative grade encodes a scale id.
+        $item['gradetype'] = GRADE_TYPE_SCALE;
+        $item['scaleid']   = -$webcoached->grade;
+    }
+
+    if ($grades === 'reset') {
+        $item['reset'] = true;
+        $grades = null;
+    }
+
+    return grade_update('mod/webcoached', $webcoached->course, 'mod', 'webcoached', $webcoached->id, 0, $grades, $item);
+}
+
+/**
+ * Updates activity grades. Called by the gradebook when it needs to (re)build grades.
+ *
+ * The webcoached module keeps no internal grade store of its own: single grades are
+ * pushed straight into the gradebook (by the teacher or the REST callback), so here
+ * we only ensure the grade item itself exists and is up to date.
+ *
+ * @param stdClass $webcoached Instance object with extra cmidnumber property.
+ * @param int $userid Specific user only, 0 means all users (unused, no internal store).
+ * @param bool $nullifnone Whether to set 0 grade to null when there is no grade (unused).
+ * @return int GRADE_UPDATE_OK, GRADE_UPDATE_FAILED, etc.
+ */
+function webcoached_update_grades($webcoached, $userid = 0, $nullifnone = true) {
+    return webcoached_grade_item_update($webcoached);
+}
+
+/**
+ * Removes the grade item for the given webcoached instance.
+ *
+ * @param stdClass $webcoached Instance object.
+ * @return int GRADE_UPDATE_OK, GRADE_UPDATE_FAILED, etc.
+ */
+function webcoached_grade_item_delete($webcoached) {
+    global $CFG;
+    require_once($CFG->libdir . '/gradelib.php');
+
+    return grade_update('mod/webcoached', $webcoached->course, 'mod', 'webcoached', $webcoached->id, 0, null, ['deleted' => true]);
+}
+
+/**
+ * Checks whether a scale is being used by any webcoached instance.
+ *
+ * Used by the course reset and the scale deletion check so an in-use scale
+ * cannot be removed.
+ *
+ * @param int $scaleid ID of the scale.
+ * @return bool True if the scale is used by any webcoached instance.
+ */
+function webcoached_scale_used_anywhere($scaleid) {
+    global $DB;
+
+    if ($scaleid && $DB->record_exists('webcoached', ['grade' => -$scaleid])) {
+        return true;
+    }
+
+    return false;
 }

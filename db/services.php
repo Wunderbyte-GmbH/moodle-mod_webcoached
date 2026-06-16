@@ -15,18 +15,33 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Web service definitions for mod_webcoached.
  *
  * @package     mod_webcoached
+ * @category    webservice
  * @copyright   2026 Wunderbyte GmbH <info@wunderbyte.at>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'mod_webcoached';
-$plugin->version   = 2026061701;
-$plugin->requires  = 2024100400; // Requires Moodle 4.5.
-$plugin->supported = [405, 502];
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'v1.1.0';
+$functions = [
+    'mod_webcoached_send_message' => [
+        'classname'   => 'mod_webcoached\external\send_message',
+        'methodname'  => 'execute',
+        'description' => 'Notify a learner about a new Webcoached message when triggered by the external system.',
+        'type'        => 'write',
+        'capabilities' => 'mod/webcoached:sendmessage',
+        'ajax'        => false,
+        'services'    => [],
+    ],
+];
+
+$services = [
+    'Webcoached external' => [
+        'functions'       => ['mod_webcoached_send_message'],
+        'restrictedusers' => 1,
+        'shortname'       => 'mod_webcoached_external',
+        'enabled'         => 1,
+    ],
+];

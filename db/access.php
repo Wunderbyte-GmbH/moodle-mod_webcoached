@@ -47,4 +47,16 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
+
+    // Allows triggering the send_message REST callback (notify a learner about a new Webcoached message).
+    'mod/webcoached:sendmessage' => [
+        'riskbitmask' => RISK_SPAM,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_MODULE,
+        'archetypes' => [
+            'teacher' => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+    ],
 ];
