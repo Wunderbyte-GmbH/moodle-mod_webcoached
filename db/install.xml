@@ -15,7 +15,7 @@
         <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="100" SEQUENCE="false" COMMENT="Grade aggregate: positive value = max points, negative value = scale id, 0 = no grade."/>
         <FIELD NAME="messagebody" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Body of the notification sent to the learner when the send_message REST call is triggered. Supports {name} and {link} placeholders. Empty falls back to the language default."/>
         <FIELD NAME="messagebodyformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="The text format of the messagebody field."/>
-        <FIELD NAME="popup" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Display mode: 0 = current window, 1 = new popup window."/>
+        <FIELD NAME="popup" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Display mode: 0 = current window, 1 = new popup window, 2 = new browser tab."/>
         <FIELD NAME="popupwidth" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1180" SEQUENCE="false" COMMENT="Width of the popup window in pixels."/>
         <FIELD NAME="popupheight" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="800" SEQUENCE="false" COMMENT="Height of the popup window in pixels."/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Timestamp of when the instance was added to the course."/>

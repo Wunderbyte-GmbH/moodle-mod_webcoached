@@ -31,8 +31,10 @@ $string['display'] = 'Anzeige';
 $string['display_help'] = 'Wie der Webcoached-Kurs geöffnet wird:
 
 * Aktuelles Fenster – die Schaltfläche ersetzt diese Seite durch den Webcoached-Kurs.
-* Neues Fenster (Popup) – die Schaltfläche öffnet den Webcoached-Kurs in einem eigenen Browserfenster mit einstellbarer Größe.';
+* Neues Fenster (Popup) – die Schaltfläche öffnet den Webcoached-Kurs in einem eigenen Browserfenster mit einstellbarer Größe.
+* Neuer Tab – die Schaltfläche öffnet den Webcoached-Kurs in einem neuen Browser-Tab.';
 $string['displaycurrent'] = 'Aktuelles Fenster';
+$string['displaynewtab'] = 'Neuer Tab';
 $string['displaypopup'] = 'Neues Fenster (Popup)';
 $string['endpoint_url'] = 'Endpoint-URL';
 $string['endpoint_url_desc'] = 'Der browserbasierte SSO-Login-Endpunkt von Webcoached (directlogin). Die signierten Parameter werden aus dem Browser der Nutzer/innen an diese URL gesendet.';

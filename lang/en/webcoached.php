@@ -31,8 +31,10 @@ $string['display'] = 'Display';
 $string['display_help'] = 'How the Webcoached course is opened:
 
 * Current window – the launch button replaces this page with the Webcoached course.
-* New window (popup) – the launch button opens the Webcoached course in a separate, sized browser window.';
+* New window (popup) – the launch button opens the Webcoached course in a separate, sized browser window.
+* New tab – the launch button opens the Webcoached course in a new browser tab.';
 $string['displaycurrent'] = 'Current window';
+$string['displaynewtab'] = 'New tab';
 $string['displaypopup'] = 'New window (popup)';
 $string['endpoint_url'] = 'Endpoint URL';
 $string['endpoint_url_desc'] = 'The Webcoached browser-based SSO login endpoint (directlogin). The signed parameters are posted to this URL from the user\'s browser.';

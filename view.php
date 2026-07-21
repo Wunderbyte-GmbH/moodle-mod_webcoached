@@ -120,6 +120,7 @@ $templatecontext = [
     'name' => format_string($webcoached->name),
     'intro' => $intro,
     'url' => $PAGE->url->out(false),
+    'newtab' => (int) $webcoached->popup === WEBCOACHED_DISPLAY_NEWTAB,
 ];
 
 echo $OUTPUT->render_from_template('mod_webcoached/launchpad', $templatecontext);

@@ -30,13 +30,15 @@
     * name string The instance name.
     * intro string The activity introduction/description.
     * url string The action URL pointing back to view.php.
+    * newtab bool Whether the launch form opens in a new browser tab.
 
     Example context (json):
     {
         "id": 1,
         "name": "Webcoached Training Course",
         "intro": "<p>Welcome to the Webcoached training module.</p>",
-        "url": "http://localhost/mod/webcoached/view.php?id=1"
+        "url": "http://localhost/mod/webcoached/view.php?id=1",
+        "newtab": false
     }
 }}
 <div class="mod_webcoached_launchpad d-flex flex-column align-items-center justify-content-center p-5 border rounded bg-light shadow-sm my-4 text-center">
@@ -44,7 +46,7 @@
     {{#intro}}
         <div class="mb-4 text-muted">{{{intro}}}</div>
     {{/intro}}
-    <form action="{{{url}}}" method="post">
+    <form action="{{{url}}}" method="post"{{#newtab}} target="_blank"{{/newtab}}>
         <input type="hidden" name="id" value="{{id}}">
         <input type="hidden" name="launch" value="1">
         <button class="btn btn-primary btn-lg px-5 py-3 shadow-sm" type="submit">

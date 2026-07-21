@@ -67,8 +67,8 @@ class mod_webcoached_mod_form extends moodleform_mod {
         $mform->addElement('editor', 'messagebody', get_string('messagebody', 'mod_webcoached'), ['rows' => 8]);
         $mform->addHelpButton('messagebody', 'messagebody', 'mod_webcoached');
 
-        // Display settings, modelled on mod_scorm: launch in the current window
-        // or in a sized popup window.
+        // Display settings, modelled on mod_scorm: launch in the current window,
+        // in a sized popup window, or in a new browser tab.
         $mform->addElement('header', 'appearancehdr', get_string('appearance'));
         $mform->addElement('select', 'popup', get_string('display', 'mod_webcoached'), webcoached_get_display_options());
         $mform->setDefault('popup', WEBCOACHED_DISPLAY_CURRENT);
