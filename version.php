@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_webcoached';
-$plugin->version   = 2026061701;
+$plugin->version   = 2026072100;
 $plugin->requires  = 2024100400; // Requires Moodle 4.5.
 $plugin->supported = [405, 502];
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'v1.1.0';
+$plugin->release   = 'v1.2.0';

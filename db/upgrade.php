@@ -66,5 +66,30 @@ function xmldb_webcoached_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026061701, 'webcoached');
     }
 
+    if ($oldversion < 2026072100) {
+        $table = new xmldb_table('webcoached');
+
+        // Define field popup (display mode) to be added to webcoached.
+        $field = new xmldb_field('popup', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0', 'messagebodyformat');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field popupwidth to be added to webcoached.
+        $field = new xmldb_field('popupwidth', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '1180', 'popup');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field popupheight to be added to webcoached.
+        $field = new xmldb_field('popupheight', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '800', 'popupwidth');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Webcoached savepoint reached.
+        upgrade_mod_savepoint(true, 2026072100, 'webcoached');
+    }
+
     return true;
 }

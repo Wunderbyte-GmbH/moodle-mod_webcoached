@@ -27,6 +27,15 @@ defined('MOODLE_INTERNAL') || die();
 $string['client_id'] = 'Client ID';
 $string['client_id_desc'] = 'The SSO Client ID agreed upon with Webcoached (e.g. moodle_test).';
 $string['continue_button'] = 'Continue to Webcoached';
+$string['display'] = 'Display';
+$string['display_help'] = 'How the Webcoached course is opened:
+
+* Current window – the launch button replaces this page with the Webcoached course.
+* New window (popup) – the launch button opens the Webcoached course in a separate, sized browser window.
+* New tab – the launch button opens the Webcoached course in a new browser tab.';
+$string['displaycurrent'] = 'Current window';
+$string['displaynewtab'] = 'New tab';
+$string['displaypopup'] = 'New window (popup)';
 $string['endpoint_url'] = 'Endpoint URL';
 $string['endpoint_url_desc'] = 'The Webcoached browser-based SSO login endpoint (directlogin). The signed parameters are posted to this URL from the user\'s browser.';
 $string['launch_button'] = 'Zum Webcoached-Kurs';
@@ -40,6 +49,8 @@ $string['modulename_help'] = 'The Webcoached Training activity module enables si
 $string['modulenameplural'] = 'Webcoached Trainings';
 $string['pluginadministration'] = 'Webcoached Training Administration';
 $string['pluginname'] = 'Webcoached Training';
+$string['popupheight'] = 'Window height (pixels)';
+$string['popupwidth'] = 'Window width (pixels)';
 $string['privacy:metadata'] = 'The webcoached plugin does not store or process personal data locally; it only transmits a signed SSO query payload to redirect the user browser.';
 $string['redirecting'] = 'You are being signed in to Webcoached. Please wait...';
 $string['remotecourseid'] = 'Webcoached course ID';
