@@ -46,6 +46,9 @@ class backup_webcoached_activity_structure_step extends backup_activity_structur
             'grade',
             'messagebody',
             'messagebodyformat',
+            'popup',
+            'popupwidth',
+            'popupheight',
             'timecreated',
             'timemodified',
         ]);

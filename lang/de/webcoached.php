@@ -27,6 +27,15 @@ defined('MOODLE_INTERNAL') || die();
 $string['client_id'] = 'Client-ID';
 $string['client_id_desc'] = 'Die mit Webcoached vereinbarte SSO-Client-ID (z. B. moodle_test).';
 $string['continue_button'] = 'Weiter zu Webcoached';
+$string['display'] = 'Anzeige';
+$string['display_help'] = 'Wie der Webcoached-Kurs geöffnet wird:
+
+* Aktuelles Fenster – die Schaltfläche ersetzt diese Seite durch den Webcoached-Kurs.
+* Neues Fenster (Popup) – die Schaltfläche öffnet den Webcoached-Kurs in einem eigenen Browserfenster mit einstellbarer Größe.
+* Eingebettet – der Webcoached-Kurs wird direkt auf der Aktivitätsseite in einem iframe eingebettet. Dies funktioniert nur, wenn die Webcoached-Plattform das Einbetten in einen Frame erlaubt und der Browser Drittanbieter-Cookies nicht blockiert.';
+$string['displaycurrent'] = 'Aktuelles Fenster';
+$string['displayembed'] = 'Eingebettet';
+$string['displaypopup'] = 'Neues Fenster (Popup)';
 $string['endpoint_url'] = 'Endpoint-URL';
 $string['endpoint_url_desc'] = 'Der browserbasierte SSO-Login-Endpunkt von Webcoached (directlogin). Die signierten Parameter werden aus dem Browser der Nutzer/innen an diese URL gesendet.';
 $string['launch_button'] = 'Zum Webcoached-Kurs';
@@ -40,6 +49,8 @@ $string['modulename_help'] = 'Das Aktivitätsmodul Webcoached Training ermöglic
 $string['modulenameplural'] = 'Webcoached Trainings';
 $string['pluginadministration'] = 'Verwaltung Webcoached Training';
 $string['pluginname'] = 'Webcoached Training';
+$string['popupheight'] = 'Fensterhöhe (Pixel)';
+$string['popupwidth'] = 'Fensterbreite (Pixel)';
 $string['privacy:metadata'] = 'Das Plugin webcoached speichert oder verarbeitet keine personenbezogenen Daten lokal; es übermittelt lediglich eine signierte SSO-Anfrage, um den Browser der Nutzer/innen weiterzuleiten.';
 $string['redirecting'] = 'Sie werden bei Webcoached angemeldet. Bitte warten ...';
 $string['remotecourseid'] = 'Webcoached-Kurs-ID';

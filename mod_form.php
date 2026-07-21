@@ -67,6 +67,25 @@ class mod_webcoached_mod_form extends moodleform_mod {
         $mform->addElement('editor', 'messagebody', get_string('messagebody', 'mod_webcoached'), ['rows' => 8]);
         $mform->addHelpButton('messagebody', 'messagebody', 'mod_webcoached');
 
+        // Display settings, modelled on mod_scorm: launch in the current window,
+        // in a sized popup window, or embedded in the activity page as an iframe.
+        $mform->addElement('header', 'appearancehdr', get_string('appearance'));
+        $mform->addElement('select', 'popup', get_string('display', 'mod_webcoached'), webcoached_get_display_options());
+        $mform->setDefault('popup', WEBCOACHED_DISPLAY_CURRENT);
+        $mform->addHelpButton('popup', 'display', 'mod_webcoached');
+
+        // Width is only relevant for the popup window; the embedded iframe always uses the full page width.
+        $mform->addElement('text', 'popupwidth', get_string('popupwidth', 'mod_webcoached'), 'maxlength="5" size="5"');
+        $mform->setType('popupwidth', PARAM_INT);
+        $mform->setDefault('popupwidth', 1180);
+        $mform->hideIf('popupwidth', 'popup', 'noteq', WEBCOACHED_DISPLAY_POPUP);
+
+        // Height applies to both the popup window and the embedded iframe.
+        $mform->addElement('text', 'popupheight', get_string('popupheight', 'mod_webcoached'), 'maxlength="5" size="5"');
+        $mform->setType('popupheight', PARAM_INT);
+        $mform->setDefault('popupheight', 800);
+        $mform->hideIf('popupheight', 'popup', 'eq', WEBCOACHED_DISPLAY_CURRENT);
+
         // Add the grade type selector (None / Point / Scale). Choosing a Yes/No scale
         // gives a simple "Completed" mark; a point value gives a real score. Either way,
         // core's "completionusegrade" condition completes the activity once a grade exists.

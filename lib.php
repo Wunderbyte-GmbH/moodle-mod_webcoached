@@ -22,6 +22,26 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+/** Launch the Webcoached course in the current window (the launch button replaces this page). */
+define('WEBCOACHED_DISPLAY_CURRENT', 0);
+/** Launch the Webcoached course in a new popup window. */
+define('WEBCOACHED_DISPLAY_POPUP', 1);
+/** Embed the Webcoached course in an iframe on the activity page. */
+define('WEBCOACHED_DISPLAY_EMBED', 2);
+
+/**
+ * Returns the display mode menu options, like scorm_get_popup_display_array().
+ *
+ * @return array Menu of display mode options keyed by WEBCOACHED_DISPLAY_* constant.
+ */
+function webcoached_get_display_options() {
+    return [
+        WEBCOACHED_DISPLAY_CURRENT => get_string('displaycurrent', 'mod_webcoached'),
+        WEBCOACHED_DISPLAY_POPUP => get_string('displaypopup', 'mod_webcoached'),
+        WEBCOACHED_DISPLAY_EMBED => get_string('displayembed', 'mod_webcoached'),
+    ];
+}
+
 /**
  * Return if the plugin supports $feature.
  *
@@ -65,6 +85,7 @@ function webcoached_add_instance(stdClass $formdata, ?mod_webcoached_mod_form $m
     $data->remotecourseid = isset($formdata->remotecourseid) ? trim($formdata->remotecourseid) : '';
     $data->grade = isset($formdata->grade) ? (int) $formdata->grade : 0;
     webcoached_set_messagebody($data, $formdata);
+    webcoached_set_display($data, $formdata);
     $data->timecreated = time();
     $data->timemodified = time();
 
@@ -98,6 +119,7 @@ function webcoached_update_instance(stdClass $formdata, ?mod_webcoached_mod_form
     $data->course = $formdata->course;
     $data->grade = isset($formdata->grade) ? (int) $formdata->grade : 0;
     webcoached_set_messagebody($data, $formdata);
+    webcoached_set_display($data, $formdata);
     $data->timemodified = time();
 
     $result = $DB->update_record('webcoached', $data);
@@ -128,6 +150,29 @@ function webcoached_delete_instance($id) {
     webcoached_grade_item_delete($webcoached);
 
     return $DB->delete_records('webcoached', ['id' => $id]);
+}
+
+/**
+ * Copies the display mode and popup dimensions from the form data onto the instance record.
+ *
+ * @param stdClass $data Target instance record being built.
+ * @param stdClass $formdata Submitted form data.
+ */
+function webcoached_set_display(stdClass $data, stdClass $formdata) {
+    $data->popup = isset($formdata->popup) ? (int) $formdata->popup : WEBCOACHED_DISPLAY_CURRENT;
+    if (!array_key_exists($data->popup, webcoached_get_display_options())) {
+        $data->popup = WEBCOACHED_DISPLAY_CURRENT;
+    }
+
+    $data->popupwidth = isset($formdata->popupwidth) ? (int) $formdata->popupwidth : 0;
+    if ($data->popupwidth <= 0) {
+        $data->popupwidth = 1180;
+    }
+
+    $data->popupheight = isset($formdata->popupheight) ? (int) $formdata->popupheight : 0;
+    if ($data->popupheight <= 0) {
+        $data->popupheight = 800;
+    }
 }
 
 /**

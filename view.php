@@ -113,14 +113,47 @@ if ($launch) {
 echo $OUTPUT->header();
 
 $intro = format_module_intro('webcoached', $webcoached, $cm->id);
+$launchurl = new moodle_url('/mod/webcoached/view.php', ['id' => $id, 'launch' => 1]);
 
-$templatecontext = [
-    'id' => $id,
-    'name' => format_string($webcoached->name),
-    'intro' => $intro,
-    'url' => $PAGE->url->out(false),
-];
+if ((int) $webcoached->popup === WEBCOACHED_DISPLAY_EMBED) {
+    // Embedded mode: load the SSO launch directly in an iframe on this page.
+    echo $OUTPUT->render_from_template('mod_webcoached/embedded', [
+        'name' => format_string($webcoached->name),
+        'intro' => $intro,
+        'launchurl' => $launchurl->out(false),
+        'height' => (int) $webcoached->popupheight,
+    ]);
+} else {
+    $templatecontext = [
+        'id' => $id,
+        'name' => format_string($webcoached->name),
+        'intro' => $intro,
+        'url' => $PAGE->url->out(false),
+    ];
 
-echo $OUTPUT->render_from_template('mod_webcoached/launchpad', $templatecontext);
+    echo $OUTPUT->render_from_template('mod_webcoached/launchpad', $templatecontext);
+
+    if ((int) $webcoached->popup === WEBCOACHED_DISPLAY_POPUP) {
+        // Popup mode: intercept the launch form and open a sized popup window instead.
+        // Without JavaScript the form still submits and launches in the current window.
+        $popupoptions = 'width=' . (int) $webcoached->popupwidth . ',height=' . (int) $webcoached->popupheight
+            . ',resizable=yes,scrollbars=yes';
+        $PAGE->requires->js_amd_inline("
+            require([], function() {
+                var form = document.querySelector('.mod_webcoached_launchpad form');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        var popup = window.open(" . json_encode($launchurl->out(false)) . ",
+                            'webcoached_popup', " . json_encode($popupoptions) . ");
+                        if (popup) {
+                            e.preventDefault();
+                            popup.focus();
+                        }
+                    });
+                }
+            });
+        ");
+    }
+}
 
 echo $OUTPUT->footer();
