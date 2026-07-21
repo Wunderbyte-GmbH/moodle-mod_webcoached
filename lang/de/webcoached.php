@@ -31,10 +31,8 @@ $string['display'] = 'Anzeige';
 $string['display_help'] = 'Wie der Webcoached-Kurs geöffnet wird:
 
 * Aktuelles Fenster – die Schaltfläche ersetzt diese Seite durch den Webcoached-Kurs.
-* Neues Fenster (Popup) – die Schaltfläche öffnet den Webcoached-Kurs in einem eigenen Browserfenster mit einstellbarer Größe.
-* Eingebettet – der Webcoached-Kurs wird direkt auf der Aktivitätsseite in einem iframe eingebettet. Dies funktioniert nur, wenn die Webcoached-Plattform das Einbetten in einen Frame erlaubt und der Browser Drittanbieter-Cookies nicht blockiert.';
+* Neues Fenster (Popup) – die Schaltfläche öffnet den Webcoached-Kurs in einem eigenen Browserfenster mit einstellbarer Größe.';
 $string['displaycurrent'] = 'Aktuelles Fenster';
-$string['displayembed'] = 'Eingebettet';
 $string['displaypopup'] = 'Neues Fenster (Popup)';
 $string['endpoint_url'] = 'Endpoint-URL';
 $string['endpoint_url_desc'] = 'Der browserbasierte SSO-Login-Endpunkt von Webcoached (directlogin). Die signierten Parameter werden aus dem Browser der Nutzer/innen an diese URL gesendet.';

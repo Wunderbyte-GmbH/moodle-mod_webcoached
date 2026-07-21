@@ -26,8 +26,6 @@
 define('WEBCOACHED_DISPLAY_CURRENT', 0);
 /** Launch the Webcoached course in a new popup window. */
 define('WEBCOACHED_DISPLAY_POPUP', 1);
-/** Embed the Webcoached course in an iframe on the activity page. */
-define('WEBCOACHED_DISPLAY_EMBED', 2);
 
 /**
  * Returns the display mode menu options, like scorm_get_popup_display_array().
@@ -38,7 +36,6 @@ function webcoached_get_display_options() {
     return [
         WEBCOACHED_DISPLAY_CURRENT => get_string('displaycurrent', 'mod_webcoached'),
         WEBCOACHED_DISPLAY_POPUP => get_string('displaypopup', 'mod_webcoached'),
-        WEBCOACHED_DISPLAY_EMBED => get_string('displayembed', 'mod_webcoached'),
     ];
 }
 
