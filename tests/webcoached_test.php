@@ -401,6 +401,87 @@ final class webcoached_test extends advanced_testcase {
     }
 
     /**
+     * The default body links the course ("Modul") and the activity by name.
+     *
+     * @covers \mod_webcoached\external\send_message::execute
+     */
+    public function test_send_message_default_body_links_course_and_activity(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course([
+            'fullname' => 'Effizient lesen, sicher entscheiden in der Pflegebegutachtung',
+        ]);
+        $webcoached = $this->getDataGenerator()->create_module('webcoached', [
+            'course' => $course->id,
+            'name'   => 'Lesetechnik',
+        ]);
+        $cm = get_coursemodule_from_instance('webcoached', $webcoached->id, $course->id, false, MUST_EXIST);
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+
+        $sink = $this->redirectMessages();
+        $result = \mod_webcoached\external\send_message::execute($cm->id, $student->id, true);
+        $messages = $sink->get_messages();
+        $sink->close();
+
+        $this->assertTrue($result['status']);
+        $this->assertCount(1, $messages);
+        $html = $messages[0]->fullmessagehtml;
+
+        // The course name is a link to the course page.
+        $this->assertStringContainsString('Effizient lesen, sicher entscheiden in der Pflegebegutachtung', $html);
+        $this->assertStringContainsString('/course/view.php?id=' . $course->id, $html);
+
+        // The activity name is a link to the webcoached activity.
+        $this->assertStringContainsString('Lesetechnik', $html);
+        $this->assertStringContainsString('/mod/webcoached/view.php?id=' . $cm->id, $html);
+
+        // No raw placeholder tokens remain.
+        foreach (['{name}', '{link}', '{course}', '{courselink}'] as $token) {
+            $this->assertStringNotContainsString($token, $html);
+        }
+
+        // The plain-text fallback carries both names as well.
+        $this->assertStringContainsString('Lesetechnik', $messages[0]->fullmessage);
+        $this->assertStringContainsString('Effizient lesen', $messages[0]->fullmessage);
+    }
+
+    /**
+     * The default body is resolved in the recipient's language, not the caller's.
+     *
+     * @covers \mod_webcoached\external\send_message::execute
+     */
+    public function test_send_message_uses_recipient_language(): void {
+        global $CFG, $DB;
+
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        // Simulate an installed German language pack: without a langconfig.php in the
+        // dataroot the string manager ignores the language entirely and the plugin's
+        // own lang/de strings are never consulted.
+        $langfolder = $CFG->dataroot . '/lang/de';
+        check_dir_exists($langfolder);
+        file_put_contents($langfolder . '/langconfig.php', "<?php \$string['thislanguage'] = 'Deutsch';");
+        get_string_manager()->reset_caches();
+
+        [$course, $cm, $student] = $this->setup_activity_with_student();
+        $DB->set_field('user', 'lang', 'de', ['id' => $student->id]);
+
+        $sink = $this->redirectMessages();
+        $result = \mod_webcoached\external\send_message::execute($cm->id, $student->id, true);
+        $messages = $sink->get_messages();
+        $sink->close();
+
+        $this->assertTrue($result['status']);
+        $this->assertCount(1, $messages);
+
+        // German default body from the plugin's lang/de pack, even though the caller (admin) uses English.
+        $this->assertStringContainsString('Sie haben eine neue Nachricht im Modul', $messages[0]->fullmessagehtml);
+        $this->assertStringContainsString('Neue Nachricht', $messages[0]->subject);
+    }
+
+    /**
      * The callback requires the mod/webcoached:sendmessage capability.
      *
      * @covers \mod_webcoached\external\send_message::execute

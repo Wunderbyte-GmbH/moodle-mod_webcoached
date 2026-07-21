@@ -175,23 +175,40 @@ class send_message extends external_api {
     protected static function send($course, $cm, $context, $webcoached, $recipient) {
         $url = new \moodle_url('/mod/webcoached/view.php', ['id' => $cm->id]);
         $name = format_string($webcoached->name, true, ['context' => $context]);
+        $courseurl = new \moodle_url('/course/view.php', ['id' => $course->id]);
+        $coursename = format_string($course->fullname, true, ['context' => \context_course::instance($course->id)]);
+
+        // Strings are resolved in the recipient's language, not the web service caller's.
+        $strman = get_string_manager();
+        $lang = !empty($recipient->lang) ? $recipient->lang : current_language();
 
         // Resolve the body: per-activity text, or the language default when empty.
         $body = isset($webcoached->messagebody) ? trim($webcoached->messagebody) : '';
         if ($body === '') {
-            $body = get_string('messagebodydefault', 'mod_webcoached');
+            $body = $strman->get_string('messagebodydefault', 'mod_webcoached', null, $lang);
         }
 
-        // Substitute the {name} and {link} placeholders.
-        $htmlbody = str_replace(['{name}', '{link}'], [s($name), \html_writer::link($url, $name)], $body);
-        $plainbody = html_to_text(str_replace(['{name}', '{link}'], [$name, $url->out(false)], $body), 0, false);
+        // Substitute the {name}, {link}, {course} and {courselink} placeholders.
+        $search = ['{name}', '{link}', '{course}', '{courselink}'];
+        $htmlbody = str_replace($search, [
+            s($name),
+            \html_writer::link($url, $name),
+            s($coursename),
+            \html_writer::link($courseurl, $coursename),
+        ], $body);
+        $plainbody = html_to_text(str_replace($search, [
+            $name,
+            $name . ' (' . $url->out(false) . ')',
+            $coursename,
+            $coursename . ' (' . $courseurl->out(false) . ')',
+        ], $body), 0, false);
 
         $message = new message();
         $message->component = 'mod_webcoached';
         $message->name = 'webcoachedmessage';
         $message->userfrom = core_user::get_noreply_user();
         $message->userto = $recipient;
-        $message->subject = get_string('messagesubject', 'mod_webcoached', $name);
+        $message->subject = $strman->get_string('messagesubject', 'mod_webcoached', $name, $lang);
         $message->fullmessage = $plainbody;
         $message->fullmessageformat = FORMAT_PLAIN;
         $message->fullmessagehtml = $htmlbody;
