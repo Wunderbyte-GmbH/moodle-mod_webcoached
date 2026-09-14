@@ -30,7 +30,7 @@
  * @copyright   2026 Wunderbyte GmbH <info@wunderbyte.at>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class restore_webcoached_activity_structure_step extends restore_structure_step {
+class restore_webcoached_activity_structure_step extends restore_activity_structure_step {
     /**
      * Define structural paths to restore.
      *
@@ -39,7 +39,7 @@ class restore_webcoached_activity_structure_step extends restore_structure_step 
     protected function define_structure() {
         $paths = [];
         $paths[] = new restore_path_element('webcoached', '/activity/webcoached');
-        return $paths;
+        return $this->prepare_activity_structure($paths);
     }
 
     /**
@@ -59,5 +59,12 @@ class restore_webcoached_activity_structure_step extends restore_structure_step 
 
         // Apply activity mapping.
         $this->apply_activity_instance($newitemid);
+    }
+
+    /**
+     * Restore the files of the intro file area once the instance exists.
+     */
+    protected function after_execute() {
+        $this->add_related_files('mod_webcoached', 'intro', null);
     }
 }

@@ -56,6 +56,9 @@ class backup_webcoached_activity_structure_step extends backup_activity_structur
         // Map sources.
         $webcoached->set_source_table('webcoached', ['id' => backup::VAR_ACTIVITYID]);
 
+        // Define file annotations.
+        $webcoached->annotate_files('mod_webcoached', 'intro', null);
+
         // Return standard structure.
         return $this->prepare_activity_structure($webcoached);
     }
